@@ -1,7 +1,7 @@
 gen-callgraph
 =============
 
-A script to generate call graph from binary
+gen-callgraph is a bash script to generate call graph from binary
 
 Usage
 -----
