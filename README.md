@@ -1,14 +1,12 @@
 gen-callgraph
 =============
 
-gen-callgraph is a script to generate call graph from binary
+Copyright (C) 2011-2015 Jerry Chen <mailto:onlyuser@gmail.com>
 
-Usage
------
+About:
+------
 
-<pre>
-gen-call-graph &lt;BINARY&gt; | dot -Tpng -ocallgraph.png
-</pre>
+gen-callgraph is a script to generate call graph from binary.
 
 Requirements
 ------------
@@ -18,6 +16,18 @@ Requirements
 * objdump
 * c++filt
 * dot
+
+Installation (Debian):
+----------------------
+
+1. git clone https://github.com/onlyuser/gen-callgraph.git
+
+Usage
+-----
+
+<pre>
+gen-call-graph &lt;BINARY&gt; | dot -Tpng -ocallgraph.png
+</pre>
 
 References
 ----------
