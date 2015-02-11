@@ -7,7 +7,7 @@ Usage
 -----
 
 <pre>
-gen-call-graph &lt;BINARY&gt;
+gen-call-graph &lt;BINARY&gt; | dot -Tpng -ocallgraph.png
 </pre>
 
 Requirements
