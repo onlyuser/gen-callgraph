@@ -11,7 +11,7 @@ gen-callgraph is a script to generate call graph from elf binary.
 A Motivating Example
 --------------------
 
-input: elf binary from source:
+input: elf binary from below source:
 <pre>
 void A();
 void C() {A();}
@@ -25,7 +25,7 @@ int main(int argc, char** argv)
 }
 </pre>
 
-output:
+output: dot for below graphviz graph:
 
 ![picture alt](https://sites.google.com/site/onlyuser/files/gen-callgraph.png "gen-callgraph")
 
@@ -37,6 +37,11 @@ Requirements
 * objdump
 * c++filt
 * dot
+
+Limitations
+-----------
+
+Only tested on x86_64 machine.
 
 Installation (Debian):
 ----------------------
