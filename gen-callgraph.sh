@@ -4,7 +4,7 @@ CMD=`basename $0`
 
 show_help()
 {
-    echo "Usage: $CMD <BINARY>"
+    echo "Usage: $CMD <BINARY> | dot -Tpng -ocallgraph.png"
 }
 
 if [ $# -ne 1 ]; then
@@ -40,8 +40,6 @@ if [ ! -f "$EXEC" ]; then
     exit 1
 fi
 
-#http://stackoverflow.com/questions/19071461/disassemble-raw-x64-machine-code
-
 SYMBOLS_FILE="`mktemp`"
 ASM_FILE="`mktemp`"
 trap "rm $SYMBOLS_FILE $ASM_FILE" EXIT
@@ -49,6 +47,7 @@ trap "rm $SYMBOLS_FILE $ASM_FILE" EXIT
 #readelf $EXEC --all > $SYMBOLS_FILE
 readelf $EXEC --headers --symbols > $SYMBOLS_FILE
 
+#http://stackoverflow.com/questions/19071461/disassemble-raw-x64-machine-code
 #objdump -D -b binary -mi386 -Maddr16,data16 $EXEC > $ASM_FILE
 objdump -D -b binary -mi386:x86-64 $EXEC > $ASM_FILE
 
@@ -81,17 +80,15 @@ if [ "$FOUND_SYMTAB" == 0 ]; then
     echo "Error: Can't find symtab section in \"$EXEC\"."
     exit
 fi
-FUNC_TRIPLE_LIST="`echo -e \"$FUNC_TRIPLE_LIST\" | sort | grep -v '^$'`"
+SORTED_FUNC_PAIR_LIST="`echo -e \"$FUNC_TRIPLE_LIST\" | sort | grep -v '^$' | cut -d' ' -f2,3`"
 
 echo "digraph `basename $EXEC` {"
 echo "rankdir=LR;"
-echo "node [shape=box];"
-echo "_start"
 echo "node [shape=ellipse];"
 
-while read -r FUNC_TRIPLE; do
-    FUNC_ADDR="`echo \"$FUNC_TRIPLE\" | cut -d' ' -f2`"
-    FUNC_NAME="`echo \"$FUNC_TRIPLE\" | cut -d' ' -f3`"
+while read -r FUNC_PAIR; do
+    FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
+    FUNC_NAME="`echo \"$FUNC_PAIR\" | cut -d' ' -f2`"
     FUNC_NAME_DEMANGLED="`echo $FUNC_NAME | c++filt`"
     if [ "$FUNC_ADDR" == "$ENTRY_POINT_ADDR" ]; then
         SHAPE_SPEC_STR=", shape=\"box\""
@@ -99,26 +96,30 @@ while read -r FUNC_TRIPLE; do
         SHAPE_SPEC_STR=""
     fi
     echo "$FUNC_NAME [label=\"0x$FUNC_ADDR: $FUNC_NAME_DEMANGLED\"$SHAPE_SPEC_STR];"
-done <<< "$FUNC_TRIPLE_LIST"
+done <<< "$SORTED_FUNC_PAIR_LIST"
 
 i=1
-while read -r FUNC_TRIPLE; do
-    FUNC_ADDR="`echo \"$FUNC_TRIPLE\" | cut -d' ' -f2`"
-    FUNC_NAME="`echo \"$FUNC_TRIPLE\" | cut -d' ' -f3`"
+while read -r FUNC_PAIR; do
+    FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
+    FUNC_NAME="`echo \"$FUNC_PAIR\" | cut -d' ' -f2`"
 
-    FUNC_ASM_LINE_NO="`grep -n \"$FUNC_ADDR:\" $ASM_FILE | head -1 | cut -d':' -f1`"
+    FUNC_ASM_LINE_NO="`grep -n \"^[ ]*$FUNC_ADDR:\" $ASM_FILE | head -1 | cut -d':' -f1`"
     if [ -z "$FUNC_ASM_LINE_NO" ]; then
         i="`expr $i + 1`"
         continue
     fi
 
     NEXT_FUNC_INDEX="`expr $i + 1`"
-    NEXT_FUNC_TRIPLE="`echo \"$FUNC_TRIPLE_LIST\" | head -$NEXT_FUNC_INDEX | tail -1`"
+    NEXT_FUNC_PAIR="`echo \"$SORTED_FUNC_PAIR_LIST\" | head -$NEXT_FUNC_INDEX | tail -1`"
 
-    NEXT_FUNC_ADDR="`echo \"$NEXT_FUNC_TRIPLE\" | cut -d' ' -f2`"
-    NEXT_FUNC_NAME="`echo \"$NEXT_FUNC_TRIPLE\" | cut -d' ' -f3`"
+    NEXT_FUNC_ADDR="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f1`"
+    if [ -z "$NEXT_FUNC_ADDR" ]; then
+        i="`expr $i + 1`"
+        continue
+    fi
+    NEXT_FUNC_NAME="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f2`"
 
-    NEXT_FUNC_ASM_LINE_NO="`grep -n \"$NEXT_FUNC_ADDR:\" $ASM_FILE | head -1 | cut -d':' -f1`"
+    NEXT_FUNC_ASM_LINE_NO="`grep -n \"^[ ]*$NEXT_FUNC_ADDR:\" $ASM_FILE | head -1 | cut -d':' -f1`"
     FUNC_ASM_LAST_LINE_NO="`expr $NEXT_FUNC_ASM_LINE_NO - 1`"
     FUNC_ASM_BODY_LEN="`expr $NEXT_FUNC_ASM_LINE_NO - $FUNC_ASM_LINE_NO`"
     FUNC_ASM_BODY="`cat $ASM_FILE | head -$FUNC_ASM_LAST_LINE_NO | tail -$FUNC_ASM_BODY_LEN`"
@@ -133,7 +134,7 @@ while read -r FUNC_TRIPLE; do
         CALL_ADDR="`echo \"$CALLEE_ADDR_PART\" | cut -d':' -f1`"
         CALLEE_CMD="`echo \"$CALLEE_ASM_LINE\" | cut -d'	' -f3`"
         CALLEE_ADDR="`echo \"$CALLEE_CMD\" | sed 's/callq[ ]\+0x\([^ ]\+\)/\1/g'`"
-        CALLEE_NAME="`echo \"$FUNC_TRIPLE_LIST\" | grep \"$CALLEE_ADDR\" | cut -d' ' -f3`"
+        CALLEE_NAME="`echo \"$SORTED_FUNC_PAIR_LIST\" | grep \"$CALLEE_ADDR\" | cut -d' ' -f2`"
         if [ -z "$CALLEE_NAME" ]; then
             continue
         fi
@@ -141,6 +142,6 @@ while read -r FUNC_TRIPLE; do
     done <<< "$CALLEE_ASM_LINES_LIST"
 
     i="`expr $i + 1`"
-done <<< "$FUNC_TRIPLE_LIST"
+done <<< "$SORTED_FUNC_PAIR_LIST"
 
 echo "}"

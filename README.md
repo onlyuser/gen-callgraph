@@ -6,7 +6,28 @@ Copyright (C) 2011-2015 Jerry Chen <mailto:onlyuser@gmail.com>
 About:
 ------
 
-gen-callgraph is a script to generate call graph from binary.
+gen-callgraph is a script to generate call graph from elf binary.
+
+A Motivating Example
+--------------------
+
+input: elf binary from source:
+<pre>
+void A();
+void C() {A();}
+void B() {C();}
+void A() {B(); C();}
+
+int main(int argc, char** argv)
+{
+    A();
+    return 0;
+}
+</pre>
+
+output:
+
+![picture alt](https://sites.google.com/site/onlyuser/files/gen-callgraph.png "gen-callgraph")
 
 Requirements
 ------------
