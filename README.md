@@ -56,7 +56,7 @@ Usage
 -----
 
 <pre>
-gen-call-graph &lt;BINARY&gt; | dot -Tpng -ocallgraph.png
+gen-call-graph &lt;BINARY&gt; [DEBUG={0*/1}] | dot -Tpng -ocallgraph.png
 </pre>
 
 References
