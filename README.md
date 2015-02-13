@@ -25,7 +25,7 @@ int main(int argc, char** argv)
 }
 </pre>
 
-output: dot for below graphviz graph:
+output: graphviz dot for below graph:
 
 ![picture alt](https://sites.google.com/site/onlyuser/files/gen-callgraph.png "gen-callgraph")
 
@@ -41,7 +41,11 @@ Requirements
 Limitations
 -----------
 
-Only tested on x86_64 machine.
+<ul>
+    <li>Only supports statically linked functions within one x86_64 binary.</li>
+    <li>Does not detect C++ class constructor/destructor.</li>
+    <li>Only tested on small binaries.</li>
+</ul>
 
 Installation (Debian):
 ----------------------
