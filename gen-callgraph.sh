@@ -75,7 +75,7 @@ if [ "$DEBUG" == 1 ]; then
 fi
 
 ENTRY_POINT_LINE="`echo \"$SYM_FILE_CONTENTS\" | grep \"Entry point address:\"`"
-ENTRY_POINT_ADDR="`echo \"$ENTRY_POINT_LINE\" | cut -d':' -f2 | tr -d ' ' | sed 's/^0x400//g'`"
+ENTRY_POINT_ADDR="`echo \"$ENTRY_POINT_LINE\" | cut -d':' -f2 | tr -d ' ' | sed 's/^0x4[0]*//g'`"
 
 echo "Generating function address pairs.. (Step 1 of 3)" 1>&2
 FUNC_TRIPLE_LIST=""
@@ -100,7 +100,7 @@ while read SYM_FILE_LINE; do
        [ "`echo \"$SYM_TUPLE\" | cut -d' ' -f5`" == "GLOBAL" ] &&
        [ "`echo \"$SYM_TUPLE\" | cut -d' ' -f7`" != "UND" ];
     then
-        FUNC_PAIR="`echo \"$SYM_TUPLE\" | cut -d' ' -f2,8 | sed 's/^0000000000400//g'`"
+        FUNC_PAIR="`echo \"$SYM_TUPLE\" | cut -d' ' -f2,8 | sed 's/^00000000004[0]*//g'`"
         FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
         FUNC_ADDR_DEC="`printf \"%d\" 0x$FUNC_ADDR`"
         FUNC_TRIPLE="$FUNC_ADDR_DEC $FUNC_PAIR"
@@ -116,7 +116,14 @@ if [ "$FOUND_SYMTAB" == 0 ]; then
     echo "Error: Can't find symtab section in \"$EXEC\"."
     exit
 fi
-SORTED_FUNC_PAIR_LIST="`echo -e \"$FUNC_TRIPLE_LIST\" | sort | grep -v '^$' | cut -d' ' -f2,3`"
+SORTED_FUNC_PAIR_LIST="`echo -e \"$FUNC_TRIPLE_LIST\" | sort -g | grep -v '^$' | cut -d' ' -f2,3`"
+
+if [ "$DEBUG" == 1 ]; then
+    DEBUG_FUNC_PAIR_FILE="`mktemp`"
+    echo "$SORTED_FUNC_PAIR_LIST" > $DEBUG_FUNC_PAIR_FILE
+    echo "Generated function address pairs: $DEBUG_FUNC_PAIR_FILE" 1>&2
+    echo "" 1>&2
+fi
 
 echo "digraph `basename $EXEC` {"
 echo "rankdir=LR;"
