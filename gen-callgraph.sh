@@ -55,9 +55,9 @@ GEN_SYM_FILE_CMD="readelf $EXEC --headers --symbols"
 GEN_ASM_FILE_CMD="objdump -D -b binary -mi386:x86-64 $EXEC"
 
 if [ "$DEBUG" == 1 ]; then
-    echo "readelf command: $GEN_SYM_FILE_CMD"
-    echo "objdump command: $GEN_ASM_FILE_CMD"
-    echo ""
+    echo "readelf command: $GEN_SYM_FILE_CMD" 1>&2
+    echo "objdump command: $GEN_ASM_FILE_CMD" 1>&2
+    echo "" 1>&2
 fi
 
 SYM_FILE_CONTENTS="`$GEN_SYM_FILE_CMD`"
@@ -69,17 +69,25 @@ if [ "$DEBUG" == 1 ]; then
     #trap "rm $DEBUG_SYM_FILE $DEBUG_ASM_FILE" EXIT
     echo "$SYM_FILE_CONTENTS" > $DEBUG_SYM_FILE
     echo "$ASM_FILE_CONTENTS" > $DEBUG_ASM_FILE
-    echo "Cached readelf output: $DEBUG_SYM_FILE"
-    echo "Cached objdump output: $DEBUG_ASM_FILE"
-    echo ""
+    echo "Cached readelf output: $DEBUG_SYM_FILE" 1>&2
+    echo "Cached objdump output: $DEBUG_ASM_FILE" 1>&2
+    echo "" 1>&2
 fi
 
 ENTRY_POINT_LINE="`echo \"$SYM_FILE_CONTENTS\" | grep \"Entry point address:\"`"
 ENTRY_POINT_ADDR="`echo \"$ENTRY_POINT_LINE\" | cut -d':' -f2 | tr -d ' ' | sed 's/^0x400//g'`"
 
+echo "Generating function address pairs.. (Step 1 of 3)" 1>&2
 FUNC_TRIPLE_LIST=""
 FOUND_SYMTAB=0
+n="`echo \"$SYM_FILE_CONTENTS\" | wc -l`"
+i=1
 while read SYM_FILE_LINE; do
+    PROGRESS=$(( $i * 100 / $n ))
+    if (( $n > 100 )); then
+        printf "\r$PROGRESS%%" 1>&2
+    fi
+
     if [ "$FOUND_SYMTAB" == 0 ]; then
         if [[ "$SYM_FILE_LINE" =~ "Symbol table '.symtab'" ]]; then
             FOUND_SYMTAB=1
@@ -98,7 +106,12 @@ while read SYM_FILE_LINE; do
         FUNC_TRIPLE="$FUNC_ADDR_DEC $FUNC_PAIR"
         FUNC_TRIPLE_LIST="$FUNC_TRIPLE_LIST\n$FUNC_TRIPLE"
     fi
+
+    i=$(( $i + 1 ))
 done <<< "$SYM_FILE_CONTENTS"
+if (( $n > 100 )); then
+    echo -e "\r100%" 1>&2
+fi
 if [ "$FOUND_SYMTAB" == 0 ]; then
     echo "Error: Can't find symtab section in \"$EXEC\"."
     exit
@@ -109,7 +122,15 @@ echo "digraph `basename $EXEC` {"
 echo "rankdir=LR;"
 echo "node [shape=ellipse];"
 
+echo "Generating nodes.. (Step 2 of 3)" 1>&2
+n="`echo \"$SORTED_FUNC_PAIR_LIST\" | wc -l`"
+i=1
 while read -r FUNC_PAIR; do
+    PROGRESS=$(( $i * 100 / $n ))
+    if (( $n > 100 )); then
+        printf "\r$PROGRESS%%" 1>&2
+    fi
+
     FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
     FUNC_NAME="`echo \"$FUNC_PAIR\" | cut -d' ' -f2`"
     FUNC_NAME_DEMANGLED="`echo $FUNC_NAME | c++filt`"
@@ -119,36 +140,48 @@ while read -r FUNC_PAIR; do
         SHAPE_SPEC_STR=""
     fi
     echo "$FUNC_NAME [label=\"0x$FUNC_ADDR: $FUNC_NAME_DEMANGLED\"$SHAPE_SPEC_STR];"
-done <<< "$SORTED_FUNC_PAIR_LIST"
 
+    i=$(( $i + 1 ))
+done <<< "$SORTED_FUNC_PAIR_LIST"
+if (( $n > 100 )); then
+    echo -e "\r100%" 1>&2
+fi
+
+echo "Generating edges.. (Step 3 of 3)" 1>&2
+n="`echo \"$SORTED_FUNC_PAIR_LIST\" | wc -l`"
 i=1
 while read -r FUNC_PAIR; do
+    PROGRESS=$(( $i * 100 / $n ))
+    if (( $n > 100 )); then
+        printf "\r$PROGRESS%%" 1>&2
+    fi
+
     FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
     FUNC_NAME="`echo \"$FUNC_PAIR\" | cut -d' ' -f2`"
 
     FUNC_ASM_LINE_NO="`echo \"$ASM_FILE_CONTENTS\" | grep -n \"^[ ]*$FUNC_ADDR:\" | head -1 | cut -d':' -f1`"
     if [ -z "$FUNC_ASM_LINE_NO" ]; then
-        i="`expr $i + 1`"
+        i=$(( $i + 1 ))
         continue
     fi
 
-    NEXT_FUNC_INDEX="`expr $i + 1`"
+    NEXT_FUNC_INDEX=$(( $i + 1 ))
     NEXT_FUNC_PAIR="`echo \"$SORTED_FUNC_PAIR_LIST\" | head -$NEXT_FUNC_INDEX | tail -1`"
 
     NEXT_FUNC_ADDR="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f1`"
     if [ -z "$NEXT_FUNC_ADDR" ]; then
-        i="`expr $i + 1`"
+        i=$(( $i + 1 ))
         continue
     fi
     NEXT_FUNC_NAME="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f2`"
 
     NEXT_FUNC_ASM_LINE_NO="`echo \"$ASM_FILE_CONTENTS\" | grep -n \"^[ ]*$NEXT_FUNC_ADDR:\" | head -1 | cut -d':' -f1`"
-    FUNC_ASM_LAST_LINE_NO="`expr $NEXT_FUNC_ASM_LINE_NO - 1`"
-    FUNC_ASM_BODY_LEN="`expr $NEXT_FUNC_ASM_LINE_NO - $FUNC_ASM_LINE_NO`"
+    FUNC_ASM_LAST_LINE_NO=$(( $NEXT_FUNC_ASM_LINE_NO - 1 ))
+    FUNC_ASM_BODY_LEN=$(( $NEXT_FUNC_ASM_LINE_NO - $FUNC_ASM_LINE_NO ))
     FUNC_ASM_BODY="`echo \"$ASM_FILE_CONTENTS\" | head -$FUNC_ASM_LAST_LINE_NO | tail -$FUNC_ASM_BODY_LEN`"
     CALLEE_ASM_LINES_LIST="`echo \"$FUNC_ASM_BODY\" | grep 'callq'`"
     if [ -z "$CALLEE_ASM_LINES_LIST" ]; then
-        i="`expr $i + 1`"
+        i=$(( $i + 1 ))
         continue
     fi
 
@@ -164,7 +197,12 @@ while read -r FUNC_PAIR; do
         echo "$FUNC_NAME -> $CALLEE_NAME [label=\"0x$CALL_ADDR\"]"
     done <<< "$CALLEE_ASM_LINES_LIST"
 
-    i="`expr $i + 1`"
+    i=$(( $i + 1 ))
 done <<< "$SORTED_FUNC_PAIR_LIST"
+if (( $n > 100 )); then
+    echo -e "\r100%" 1>&2
+fi
 
 echo "}"
+
+echo "Done!" 1>&2
