@@ -25,6 +25,8 @@ int main(int argc, char** argv)
 }
 </pre>
 
+command: g++ main.cpp -omain; gen-callgraph main | dot -Tpng -omain.png
+
 output: graphviz dot for below graph:
 
 ![picture alt](https://sites.google.com/site/onlyuser/files/gen-callgraph.png "gen-callgraph")
