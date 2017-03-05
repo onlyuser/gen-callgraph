@@ -80,15 +80,13 @@ ENTRY_POINT_ADDR="`echo \"$ENTRY_POINT_LINE\" | cut -d':' -f2 | tr -d ' ' | sed 
 unset FUNC_PAIR_ARRAY
 declare -a FUNC_PAIR_ARRAY
 
-echo "Generating function address pairs.. (Step 1 of 3)" 1>&2
+echo "Parsing symbol table.. (Step 1 of 4)" 1>&2
 FOUND_SYMTAB=0
 n="`echo \"$SYM_FILE_CONTENTS\" | wc -l`"
 i=1
 while read SYM_FILE_LINE; do
     PROGRESS=$(( $i * 100 / $n ))
-    if (( $n > 100 )); then
-        printf "\r$PROGRESS%%" 1>&2
-    fi
+    printf "\r$PROGRESS%%" 1>&2
 
     if [ "$FOUND_SYMTAB" == 0 ]; then
         if [[ "$SYM_FILE_LINE" =~ "Symbol table '.symtab'" ]]; then
@@ -111,9 +109,7 @@ while read SYM_FILE_LINE; do
 
     i=$(( $i + 1 ))
 done <<< "$SYM_FILE_CONTENTS"
-if (( $n > 100 )); then
-    echo -e "\r100%" 1>&2
-fi
+echo -e "\r100%" 1>&2
 if [ "$FOUND_SYMTAB" == 0 ]; then
     echo "Error: Can't find symtab section in \"$EXEC\"."
     unset FUNC_PAIR_ARRAY
@@ -129,17 +125,36 @@ if [ "$DEBUG" == 1 ]; then
     echo "" 1>&2
 fi
 
+unset ASM_CMD_HASHMAP
+declare -A ASM_CMD_HASHMAP
+
+echo "Parsing disassembly.. (Step 2 of 4)" 1>&2
+n="`echo \"$ASM_FILE_CONTENTS\" | wc -l`"
+i=1
+while read ASM_FILE_LINE; do
+    PROGRESS=$(( $i * 100 / $n ))
+    printf "\r$PROGRESS%%" 1>&2
+
+    REGEX="^[ ]*([a-h0-9]*):[^a-z]*(.*)"
+    if [[ $ASM_FILE_LINE =~ $REGEX ]]; then
+        ASM_FILE_LINE_ADDR="${BASH_REMATCH[1]}"
+        ASM_FILE_LINE_CMD="${BASH_REMATCH[2]}"
+        ASM_CMD_HASHMAP[$ASM_FILE_LINE_ADDR]="$i:$ASM_FILE_LINE_CMD"
+    fi
+
+    i=$(( $i + 1 ))
+done <<< "$ASM_FILE_CONTENTS"
+echo -e "\r100%" 1>&2
+
 echo "digraph `basename $EXEC` {"
 echo "rankdir=LR;"
 echo "node [shape=ellipse];"
 
-echo "Generating nodes.. (Step 2 of 3)" 1>&2
+echo "Generating nodes.. (Step 3 of 4)" 1>&2
 n="`echo \"$SORTED_FUNC_PAIR_LIST\" | wc -l`"
 for i in `seq 0 $(( $n - 1 ))`; do
     PROGRESS=$(( $i * 100 / $n ))
-    if (( $n > 100 )); then
-        printf "\r$PROGRESS%%" 1>&2
-    fi
+    printf "\r$PROGRESS%%" 1>&2
     FUNC_PAIR=${SORTED_FUNC_PAIR_ARRAY[$i]}
 
     FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
@@ -153,23 +168,19 @@ for i in `seq 0 $(( $n - 1 ))`; do
     fi
     echo "$FUNC_NAME [label=\"0x$FUNC_ADDR: $FUNC_NAME_DEMANGLED\"$SHAPE_SPEC_STR];"
 done
-if (( $n > 100 )); then
-    echo -e "\r100%" 1>&2
-fi
+echo -e "\r100%" 1>&2
 
-echo "Generating edges.. (Step 3 of 3)" 1>&2
+echo "Generating edges.. (Step 4 of 4)" 1>&2
 n="`echo \"$SORTED_FUNC_PAIR_LIST\" | wc -l`"
 for i in `seq 0 $(( $n - 1 ))`; do
     PROGRESS=$(( $i * 100 / $n ))
-    if (( $n > 100 )); then
-        printf "\r$PROGRESS%%" 1>&2
-    fi
+    printf "\r$PROGRESS%%" 1>&2
     FUNC_PAIR=${SORTED_FUNC_PAIR_ARRAY[$i]}
 
     FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
     FUNC_ADDR="`printf \"%x\" 0x$FUNC_ADDR`"
     FUNC_NAME="`echo \"$FUNC_PAIR\" | cut -d' ' -f2`"
-    FUNC_ASM_LINE_NO="`echo \"$ASM_FILE_CONTENTS\" | grep -n \"^[ ]*$FUNC_ADDR:\" | head -1 | cut -d':' -f1`"
+    FUNC_ASM_LINE_NO="`echo ${ASM_CMD_HASHMAP[$FUNC_ADDR]} | cut -d':' -f1`"
     if [ -z "$FUNC_ASM_LINE_NO" ]; then
         i=$(( $i + 1 ))
         continue
@@ -185,7 +196,7 @@ for i in `seq 0 $(( $n - 1 ))`; do
     NEXT_FUNC_ADDR="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f1`"
     NEXT_FUNC_ADDR="`printf \"%x\" 0x$NEXT_FUNC_ADDR`"
     NEXT_FUNC_NAME="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f2`"
-    NEXT_FUNC_ASM_LINE_NO="`echo \"$ASM_FILE_CONTENTS\" | grep -n \"^[ ]*$NEXT_FUNC_ADDR:\" | head -1 | cut -d':' -f1`"
+    NEXT_FUNC_ASM_LINE_NO="`echo ${ASM_CMD_HASHMAP[$NEXT_FUNC_ADDR]} | cut -d':' -f1`"
     if [ -z "$NEXT_FUNC_ASM_LINE_NO" ]; then
         i=$(( $i + 1 ))
         continue
@@ -212,12 +223,11 @@ for i in `seq 0 $(( $n - 1 ))`; do
         echo "$FUNC_NAME -> $CALLEE_NAME [label=\"0x$CALL_ADDR\"]"
     done <<< "$CALLEE_ASM_LINES_LIST"
 done
-if (( $n > 100 )); then
-    echo -e "\r100%" 1>&2
-fi
+echo -e "\r100%" 1>&2
 
 echo "}"
 
 echo "Done!" 1>&2
 
 unset FUNC_PAIR_ARRAY
+unset ASM_CMD_HASHMAP
