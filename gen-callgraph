@@ -171,7 +171,6 @@ for i in `seq 0 $(( $n - 1 ))`; do
     FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
     FUNC_ADDR="`printf \"%x\" 0x$FUNC_ADDR`"
     FUNC_NAME="`echo \"$FUNC_PAIR\" | cut -d' ' -f2`"
-
     FUNC_ASM_LINE_NO="`echo \"$ASM_FILE_CONTENTS\" | grep -n \"^[ ]*$FUNC_ADDR:\" | head -1 | cut -d':' -f1`"
     if [ -z "$FUNC_ASM_LINE_NO" ]; then
         i=$(( $i + 1 ))
@@ -188,8 +187,12 @@ for i in `seq 0 $(( $n - 1 ))`; do
     NEXT_FUNC_ADDR="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f1`"
     NEXT_FUNC_ADDR="`printf \"%x\" 0x$NEXT_FUNC_ADDR`"
     NEXT_FUNC_NAME="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f2`"
-
     NEXT_FUNC_ASM_LINE_NO="`echo \"$ASM_FILE_CONTENTS\" | grep -n \"^[ ]*$NEXT_FUNC_ADDR:\" | head -1 | cut -d':' -f1`"
+    if [ -z "$NEXT_FUNC_ASM_LINE_NO" ]; then
+        i=$(( $i + 1 ))
+        continue
+    fi
+
     FUNC_ASM_LAST_LINE_NO=$(( $NEXT_FUNC_ASM_LINE_NO - 1 ))
     FUNC_ASM_BODY_LEN=$(( $NEXT_FUNC_ASM_LINE_NO - $FUNC_ASM_LINE_NO ))
     FUNC_ASM_BODY="`echo \"$ASM_FILE_CONTENTS\" | head -$FUNC_ASM_LAST_LINE_NO | tail -$FUNC_ASM_BODY_LEN`"
