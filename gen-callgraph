@@ -77,6 +77,9 @@ fi
 ENTRY_POINT_LINE="`echo \"$SYM_FILE_CONTENTS\" | grep \"Entry point address:\"`"
 ENTRY_POINT_ADDR="`echo \"$ENTRY_POINT_LINE\" | cut -d':' -f2 | tr -d ' ' | sed 's/^0x4[0]*//g'`"
 
+unset FUNC_PAIR_ARRAY
+declare -a FUNC_PAIR_ARRAY
+
 echo "Generating function address pairs.. (Step 1 of 3)" 1>&2
 FUNC_TRIPLE_LIST=""
 FOUND_SYMTAB=0
@@ -102,9 +105,9 @@ while read SYM_FILE_LINE; do
     then
         FUNC_PAIR="`echo \"$SYM_TUPLE\" | cut -d' ' -f2,8 | sed 's/^00000000004[0]*//g'`"
         FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
-        FUNC_ADDR_DEC="`printf \"%d\" 0x$FUNC_ADDR`"
-        FUNC_TRIPLE="$FUNC_ADDR_DEC $FUNC_PAIR"
-        FUNC_TRIPLE_LIST="$FUNC_TRIPLE_LIST\n$FUNC_TRIPLE"
+        FUNC_ADDR="`printf \"%08x\" 0x$FUNC_ADDR`"
+        FUNC_NAME="`echo \"$FUNC_PAIR\" | cut -d' ' -f2`"
+        FUNC_PAIR_ARRAY[$i]="$FUNC_ADDR $FUNC_NAME"
     fi
 
     i=$(( $i + 1 ))
@@ -114,9 +117,12 @@ if (( $n > 100 )); then
 fi
 if [ "$FOUND_SYMTAB" == 0 ]; then
     echo "Error: Can't find symtab section in \"$EXEC\"."
+    unset FUNC_PAIR_ARRAY
     exit
 fi
 SORTED_FUNC_PAIR_LIST="`echo -e \"$FUNC_TRIPLE_LIST\" | sort -g | grep -v '^$' | cut -d' ' -f2,3`"
+IFS=$'\n'; SORTED_FUNC_PAIR_ARRAY=($(sort <<< "${FUNC_PAIR_ARRAY[*]}")); unset IFS
+SORTED_FUNC_PAIR_LIST="`printf \"%s\n\" \"${SORTED_FUNC_PAIR_ARRAY[@]}\"`"
 
 if [ "$DEBUG" == 1 ]; then
     DEBUG_FUNC_PAIR_FILE="`mktemp`"
@@ -131,14 +137,15 @@ echo "node [shape=ellipse];"
 
 echo "Generating nodes.. (Step 2 of 3)" 1>&2
 n="`echo \"$SORTED_FUNC_PAIR_LIST\" | wc -l`"
-i=1
-while read -r FUNC_PAIR; do
+for i in `seq 0 $(( $n - 1 ))`; do
     PROGRESS=$(( $i * 100 / $n ))
     if (( $n > 100 )); then
         printf "\r$PROGRESS%%" 1>&2
     fi
+    FUNC_PAIR=${SORTED_FUNC_PAIR_ARRAY[$i]}
 
     FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
+    FUNC_ADDR="`printf \"%x\" 0x$FUNC_ADDR`"
     FUNC_NAME="`echo \"$FUNC_PAIR\" | cut -d' ' -f2`"
     FUNC_NAME_DEMANGLED="`echo $FUNC_NAME | c++filt`"
     if [ "$FUNC_ADDR" == "$ENTRY_POINT_ADDR" ]; then
@@ -147,23 +154,22 @@ while read -r FUNC_PAIR; do
         SHAPE_SPEC_STR=""
     fi
     echo "$FUNC_NAME [label=\"0x$FUNC_ADDR: $FUNC_NAME_DEMANGLED\"$SHAPE_SPEC_STR];"
-
-    i=$(( $i + 1 ))
-done <<< "$SORTED_FUNC_PAIR_LIST"
+done
 if (( $n > 100 )); then
     echo -e "\r100%" 1>&2
 fi
 
 echo "Generating edges.. (Step 3 of 3)" 1>&2
 n="`echo \"$SORTED_FUNC_PAIR_LIST\" | wc -l`"
-i=1
-while read -r FUNC_PAIR; do
+for i in `seq 0 $(( $n - 1 ))`; do
     PROGRESS=$(( $i * 100 / $n ))
     if (( $n > 100 )); then
         printf "\r$PROGRESS%%" 1>&2
     fi
+    FUNC_PAIR=${SORTED_FUNC_PAIR_ARRAY[$i]}
 
     FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
+    FUNC_ADDR="`printf \"%x\" 0x$FUNC_ADDR`"
     FUNC_NAME="`echo \"$FUNC_PAIR\" | cut -d' ' -f2`"
 
     FUNC_ASM_LINE_NO="`echo \"$ASM_FILE_CONTENTS\" | grep -n \"^[ ]*$FUNC_ADDR:\" | head -1 | cut -d':' -f1`"
@@ -173,13 +179,14 @@ while read -r FUNC_PAIR; do
     fi
 
     NEXT_FUNC_INDEX=$(( $i + 1 ))
-    NEXT_FUNC_PAIR="`echo \"$SORTED_FUNC_PAIR_LIST\" | head -$NEXT_FUNC_INDEX | tail -1`"
-
-    NEXT_FUNC_ADDR="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f1`"
-    if [ -z "$NEXT_FUNC_ADDR" ]; then
+    NEXT_FUNC_PAIR=${SORTED_FUNC_PAIR_ARRAY[$NEXT_FUNC_INDEX]}
+    if [ -z "$NEXT_FUNC_PAIR" ]; then
         i=$(( $i + 1 ))
         continue
     fi
+
+    NEXT_FUNC_ADDR="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f1`"
+    NEXT_FUNC_ADDR="`printf \"%x\" 0x$NEXT_FUNC_ADDR`"
     NEXT_FUNC_NAME="`echo \"$NEXT_FUNC_PAIR\" | cut -d' ' -f2`"
 
     NEXT_FUNC_ASM_LINE_NO="`echo \"$ASM_FILE_CONTENTS\" | grep -n \"^[ ]*$NEXT_FUNC_ADDR:\" | head -1 | cut -d':' -f1`"
@@ -203,9 +210,7 @@ while read -r FUNC_PAIR; do
         fi
         echo "$FUNC_NAME -> $CALLEE_NAME [label=\"0x$CALL_ADDR\"]"
     done <<< "$CALLEE_ASM_LINES_LIST"
-
-    i=$(( $i + 1 ))
-done <<< "$SORTED_FUNC_PAIR_LIST"
+done
 if (( $n > 100 )); then
     echo -e "\r100%" 1>&2
 fi
@@ -213,3 +218,5 @@ fi
 echo "}"
 
 echo "Done!" 1>&2
+
+unset FUNC_PAIR_ARRAY
