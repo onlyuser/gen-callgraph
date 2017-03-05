@@ -214,7 +214,7 @@ for i in `seq 0 $(( $FUNC_COUNT - 1 ))`; do
         CALL_ADDR="`echo \"$CALLEE_ADDR_PART\" | cut -d':' -f1`"
         CALLEE_CMD="`echo \"$CALLEE_ASM_LINE\" | cut -d'	' -f3`"
         CALLEE_ADDR="`echo \"$CALLEE_CMD\" | sed 's/callq[ ]\+0x\([^ ]\+\)/\1/g'`"
-        CALLEE_NAME="`echo \"$SORTED_FUNC_PAIR_LIST\" | grep \"$CALLEE_ADDR\" | cut -d' ' -f2`"
+        CALLEE_NAME="`echo \"$SORTED_FUNC_PAIR_LIST\" | grep \"^[0]*$CALLEE_ADDR\" | cut -d' ' -f2`"
         if [ -z "$CALLEE_NAME" ]; then
             continue
         fi
