@@ -81,7 +81,6 @@ unset FUNC_PAIR_ARRAY
 declare -a FUNC_PAIR_ARRAY
 
 echo "Generating function address pairs.. (Step 1 of 3)" 1>&2
-FUNC_TRIPLE_LIST=""
 FOUND_SYMTAB=0
 n="`echo \"$SYM_FILE_CONTENTS\" | wc -l`"
 i=1
@@ -120,7 +119,6 @@ if [ "$FOUND_SYMTAB" == 0 ]; then
     unset FUNC_PAIR_ARRAY
     exit
 fi
-SORTED_FUNC_PAIR_LIST="`echo -e \"$FUNC_TRIPLE_LIST\" | sort -g | grep -v '^$' | cut -d' ' -f2,3`"
 IFS=$'\n'; SORTED_FUNC_PAIR_ARRAY=($(sort <<< "${FUNC_PAIR_ARRAY[*]}")); unset IFS
 SORTED_FUNC_PAIR_LIST="`printf \"%s\n\" \"${SORTED_FUNC_PAIR_ARRAY[@]}\"`"
 
