@@ -77,13 +77,12 @@ fi
 ENTRY_POINT_LINE="`echo \"$SYM_FILE_CONTENTS\" | grep \"Entry point address:\"`"
 ENTRY_POINT_ADDR="`echo \"$ENTRY_POINT_LINE\" | cut -d':' -f2 | tr -d ' ' | sed 's/^0x4[0]*//g'`"
 
-unset FUNC_PAIR_ARRAY
 declare -a FUNC_PAIR_ARRAY
 
 echo "Parsing symbol table.. (Step 1 of 4)" 1>&2
 FOUND_SYMTAB=0
 n="`echo \"$SYM_FILE_CONTENTS\" | wc -l`"
-i=1
+i=0
 while read SYM_FILE_LINE; do
     PROGRESS=$(( $i * 100 / $n ))
     printf "\r$PROGRESS%%" 1>&2
@@ -125,18 +124,17 @@ if [ "$DEBUG" == 1 ]; then
     echo "" 1>&2
 fi
 
-unset ASM_CMD_HASHMAP
 declare -A ASM_CMD_HASHMAP
 
 echo "Parsing disassembly.. (Step 2 of 4)" 1>&2
 n="`echo \"$ASM_FILE_CONTENTS\" | wc -l`"
-i=1
+i=0
 while read ASM_FILE_LINE; do
     PROGRESS=$(( $i * 100 / $n ))
     printf "\r$PROGRESS%%" 1>&2
 
     REGEX="^[ ]*([a-h0-9]*):[^a-z]*(.*)"
-    if [[ $ASM_FILE_LINE =~ $REGEX ]]; then
+    if [[ "$ASM_FILE_LINE" =~ $REGEX ]]; then
         ASM_FILE_LINE_ADDR="${BASH_REMATCH[1]}"
         ASM_FILE_LINE_CMD="${BASH_REMATCH[2]}"
         ASM_CMD_HASHMAP[$ASM_FILE_LINE_ADDR]="$i:$ASM_FILE_LINE_CMD"

@@ -44,7 +44,7 @@ Limitations
 <ul>
     <li>Only supports statically linked functions within one x86_64 binary.</li>
     <li>Does not detect C++ class constructor/destructor.</li>
-    <li>Only tested on small binaries.</li>
+    <li>Naive algorithm. Only tested on small binaries.</li>
 </ul>
 
 Installation (Debian):
