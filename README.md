@@ -43,7 +43,7 @@ Limitations
 
 <ul>
     <li>Only supports statically linked functions within one x86_64 binary.</li>
-    <li>Only supports function calls invoked by assembly command callq on literal (non-register) arguments</li>
+    <li>Only supports function calls invoked by assembly command callq on literal (non-register) destinations.</li>
     <li>Naive algorithm. Only tested on small binaries.</li>
     <li>Does not detect C++ class constructor/destructor.</li>
 </ul>
