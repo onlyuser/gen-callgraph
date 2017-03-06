@@ -97,7 +97,7 @@ while read SYM_FILE_LINE; do
     fi
     SYM_TUPLE="`echo \"$SYM_FILE_LINE\" | sed 's/[ ]\+/ /g'`"
     if [ "`echo \"$SYM_TUPLE\" | cut -d' ' -f4`" == "FUNC" ] &&
-       [ "`echo \"$SYM_TUPLE\" | cut -d' ' -f5`" == "GLOBAL" ] &&
+       [ "`echo \"$SYM_TUPLE\" | cut -d' ' -f5`" != "LOCAL" ] &&
        [ "`echo \"$SYM_TUPLE\" | cut -d' ' -f7`" != "UND" ];
     then
         FUNC_PAIR="`echo \"$SYM_TUPLE\" | cut -d' ' -f2,8 | sed 's/^00000000004[0]*//g'`"
@@ -203,7 +203,7 @@ for i in `seq 0 $(( $FUNC_COUNT - 1 ))`; do
     FUNC_ASM_LAST_LINE_NO=$(( $NEXT_FUNC_ASM_LINE_NO - 1 ))
     FUNC_ASM_BODY_LEN=$(( $NEXT_FUNC_ASM_LINE_NO - $FUNC_ASM_LINE_NO ))
     FUNC_ASM_BODY="`echo \"$ASM_FILE_CONTENTS\" | head -$FUNC_ASM_LAST_LINE_NO | tail -$FUNC_ASM_BODY_LEN`"
-    CALLEE_ASM_LINES_LIST="`echo \"$FUNC_ASM_BODY\" | grep 'callq'`"
+    CALLEE_ASM_LINES_LIST="`echo \"$FUNC_ASM_BODY\" | egrep '\<callq\>|\<jmpq\>|\<jmp\>|\<je\>|\<jne\>|\<jg\>|\<jge\>|\<jl\>|\<jle\>'`"
     if [ -z "$CALLEE_ASM_LINES_LIST" ]; then
         i=$(( $i + 1 ))
         continue
@@ -213,7 +213,7 @@ for i in `seq 0 $(( $FUNC_COUNT - 1 ))`; do
         CALLEE_ADDR_PART="`echo \"$CALLEE_ASM_LINE\" | cut -d'	' -f1`"
         CALL_ADDR="`echo \"$CALLEE_ADDR_PART\" | cut -d':' -f1`"
         CALLEE_CMD="`echo \"$CALLEE_ASM_LINE\" | cut -d'	' -f3`"
-        CALLEE_ADDR="`echo \"$CALLEE_CMD\" | sed 's/callq[ ]\+0x\([^ ]\+\)/\1/g'`"
+        CALLEE_ADDR="`echo \"$CALLEE_CMD\" | sed 's/callq[ ]\+0x\([^ ]\+\)/\1/g' | sed 's/j[^ ]\+[ ]\+0x\([^ ]\+\)/\1/g'`"
         CALLEE_NAME="`echo \"$SORTED_FUNC_PAIR_LIST\" | grep \"^[0]*$CALLEE_ADDR\" | cut -d' ' -f2`"
         if [ -z "$CALLEE_NAME" ]; then
             continue

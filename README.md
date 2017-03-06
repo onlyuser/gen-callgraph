@@ -60,6 +60,14 @@ Usage
 gen-callgraph &lt;BINARY&gt; [DEBUG={0*/1}] | dot -Tpng -ocallgraph.png
 </pre>
 
+Recommended gcc Options
+-----------------------
+
+<ul>
+    <li>-fno-function-cse</li>
+    <li>-fomit-frame-pointer</li>
+</ul>
+
 References
 ----------
 
