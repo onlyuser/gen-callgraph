@@ -77,6 +77,12 @@ References
 
     <dt>"Graphviz - Graph Visualization Software"</dt>
     <dd>http://www.graphviz.org/</dd>
+
+    <dt>"Trying to understand gcc option -fomit-frame-pointer"</dt>
+    <dd>http://stackoverflow.com/questions/14666665/trying-to-understand-gcc-option-fomit-frame-pointer</dd>
+
+    <dt>"3.10 Options That Control Optimization"</dt>
+    <dd>https://gcc.gnu.org/onlinedocs/gcc-4.5.2/gcc/Optimize-Options.html</dd>
 </dl>
 
 Keywords
