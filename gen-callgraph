@@ -79,7 +79,7 @@ ENTRY_POINT_ADDR="`echo \"$ENTRY_POINT_LINE\" | cut -d':' -f2 | tr -d ' ' | sed 
 
 declare -a FUNC_PAIR_ARRAY
 
-echo "Parsing symbol table.. (Step 1 of 4)" 1>&2
+echo "Analyzing symbol table.. (Step 1 of 4)" 1>&2
 FOUND_SYMTAB=0
 n="`echo \"$SYM_FILE_CONTENTS\" | wc -l`"
 i=0
@@ -128,7 +128,7 @@ fi
 
 declare -A ASM_CMD_HASHMAP
 
-echo "Parsing disassembly.. (Step 2 of 4)" 1>&2
+echo "Analyzing disassembly.. (Step 2 of 4)" 1>&2
 n="`echo \"$ASM_FILE_CONTENTS\" | wc -l`"
 i=0
 while read ASM_FILE_LINE; do
