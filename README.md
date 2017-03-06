@@ -64,6 +64,8 @@ Recommended gcc Options
 -----------------------
 
 <ul>
+    <li>-g</li>
+    <li>-O0</li>
     <li>-fno-function-cse</li>
     <li>-fomit-frame-pointer</li>
 </ul>
