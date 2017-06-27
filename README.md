@@ -32,7 +32,7 @@ output: graphviz dot for below graph:
 Requirements
 ------------
 
-    bash readelf objdump c++filt dot
+    bash readelf objdump c++filt graphviz
 
 Limitations
 -----------
