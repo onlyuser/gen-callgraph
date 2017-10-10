@@ -3,8 +3,8 @@ gen-callgraph
 
 Copyright (C) 2011-2017 <mailto:onlyuser@gmail.com>
 
-About:
-------
+About
+-----
 
 gen-callgraph is a script to generate call graph from elf binary.
 
@@ -44,8 +44,8 @@ Limitations
     <li>Does not detect C++ class constructor/destructor.</li>
 </ul>
 
-Installation (Debian):
-----------------------
+Installation (Debian)
+---------------------
 
 1. git clone https://github.com/onlyuser/gen-callgraph.git
 
