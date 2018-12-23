@@ -172,6 +172,8 @@ echo "digraph `basename $EXEC | sed 's/\./_/g'` {"
 echo "rankdir=LR;"
 echo "node [shape=ellipse];"
 
+declare -A UNIQ_FUNC
+
 echo "Generating nodes.. (Step 3 of 4)" 1>&2
 for i in `seq 0 $(( $FUNC_COUNT - 1 ))`; do
     PROGRESS=$(( $i * 100 / $FUNC_COUNT ))
@@ -187,6 +189,12 @@ for i in `seq 0 $(( $FUNC_COUNT - 1 ))`; do
     else
         SHAPE_SPEC_STR=""
     fi
+
+    if [ -n "${UNIQ_FUNC[$FUNC_ADDR]}" ]; then
+        continue
+    fi
+    UNIQ_FUNC[$FUNC_ADDR]="1"
+
     echo "$FUNC_NAME [label=\"0x$FUNC_ADDR: $FUNC_NAME_DEMANGLED\"$SHAPE_SPEC_STR];"
 done
 echo -e "\r100%" 1>&2
@@ -236,7 +244,7 @@ for i in `seq 0 $(( $FUNC_COUNT - 1 ))`; do
         CALL_ADDR="`echo \"$CALLEE_ADDR_PART\" | cut -d':' -f1`"
         CALLEE_CMD="`echo \"$CALLEE_ASM_LINE\" | cut -d$'\t' -f3`"
         CALLEE_ADDR="`echo \"$CALLEE_CMD\" | sed 's/callq[ ]\+0x\([^ ]\+\)/\1/g' | sed 's/j[^ ]\+[ ]\+0x\([^ ]\+\)/\1/g'`"
-        CALLEE_NAME="`echo \"$SORTED_FUNC_PAIR_LIST\" | grep \"^[0]*$CALLEE_ADDR\" | cut -d' ' -f2`"
+        CALLEE_NAME="`echo \"$SORTED_FUNC_PAIR_LIST\" | grep \"^[0]*$CALLEE_ADDR\" | head -1 | cut -d' ' -f2`"
         if [ -z "$CALLEE_NAME" ]; then
             continue
         fi
