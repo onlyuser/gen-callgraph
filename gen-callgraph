@@ -152,12 +152,16 @@ while read ASM_FILE_LINE; do
     PROGRESS=$(( $i * 100 / $n ))
     printf "\r$PROGRESS%%" 1>&2
 
-    REGEX="^[ ]*([a-h0-9]*):[^a-z]*(.*)"
-    if [[ "$ASM_FILE_LINE" =~ $REGEX ]]; then
-        ASM_FILE_LINE_ADDR="${BASH_REMATCH[1]}"
-        ASM_FILE_LINE_CMD="${BASH_REMATCH[2]}"
-        ASM_CMD_HASHMAP[$ASM_FILE_LINE_ADDR]="$i:$ASM_FILE_LINE_CMD"
+    TAB=`printf '\t'`
+    REGEX="^[ ]*([a-h0-9]*):$TAB(.*)$TAB(.*)"
+    if ! [[ "$ASM_FILE_LINE" =~ $REGEX ]]; then
+        i=$(( $i + 1 ))
+        continue
     fi
+
+    ASM_FILE_LINE_ADDR="${BASH_REMATCH[1]}"
+    ASM_FILE_LINE_CMD="${BASH_REMATCH[3]}"
+    ASM_CMD_HASHMAP[$ASM_FILE_LINE_ADDR]="$i:$ASM_FILE_LINE_CMD"
 
     i=$(( $i + 1 ))
 done <<< "$ASM_FILE_CONTENTS"
