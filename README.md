@@ -41,7 +41,6 @@ Limitations
     <li>Only supports statically linked functions within one x86_64 binary.</li>
     <li>Only supports function calls invoked by assembly commands callq/jmpq/jmp and conditional jump variants on literal (non-register) destinations.</li>
     <li>Naive algorithm. Only tested on small binaries.</li>
-    <li>Does not detect C++ class constructor/destructor.</li>
 </ul>
 
 Installation (Debian)
