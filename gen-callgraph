@@ -145,6 +145,8 @@ fi
 
 declare -A ASM_CMD_HASHMAP
 
+TAB=`printf '\t'`
+
 echo "Analyzing disassembly.. (Step 2 of 4)" 1>&2
 n="`echo \"$ASM_FILE_CONTENTS\" | wc -l`"
 i=0
@@ -152,7 +154,6 @@ while read ASM_FILE_LINE; do
     PROGRESS=$(( $i * 100 / $n ))
     printf "\r$PROGRESS%%" 1>&2
 
-    TAB=`printf '\t'`
     REGEX="^[ ]*([a-h0-9]*):$TAB(.*)$TAB(.*)"
     if ! [[ "$ASM_FILE_LINE" =~ $REGEX ]]; then
         i=$(( $i + 1 ))
@@ -167,7 +168,7 @@ while read ASM_FILE_LINE; do
 done <<< "$ASM_FILE_CONTENTS"
 echo -e "\r100%" 1>&2
 
-echo "digraph `basename $EXEC` {"
+echo "digraph `basename $EXEC | sed 's/\./_/g'` {"
 echo "rankdir=LR;"
 echo "node [shape=ellipse];"
 
@@ -231,9 +232,9 @@ for i in `seq 0 $(( $FUNC_COUNT - 1 ))`; do
     fi
 
     while read -r CALLEE_ASM_LINE; do
-        CALLEE_ADDR_PART="`echo \"$CALLEE_ASM_LINE\" | cut -d'	' -f1`"
+        CALLEE_ADDR_PART="`echo \"$CALLEE_ASM_LINE\" | cut -d$'\t' -f1`"
         CALL_ADDR="`echo \"$CALLEE_ADDR_PART\" | cut -d':' -f1`"
-        CALLEE_CMD="`echo \"$CALLEE_ASM_LINE\" | cut -d'	' -f3`"
+        CALLEE_CMD="`echo \"$CALLEE_ASM_LINE\" | cut -d$'\t' -f3`"
         CALLEE_ADDR="`echo \"$CALLEE_CMD\" | sed 's/callq[ ]\+0x\([^ ]\+\)/\1/g' | sed 's/j[^ ]\+[ ]\+0x\([^ ]\+\)/\1/g'`"
         CALLEE_NAME="`echo \"$SORTED_FUNC_PAIR_LIST\" | grep \"^[0]*$CALLEE_ADDR\" | cut -d' ' -f2`"
         if [ -z "$CALLEE_NAME" ]; then
