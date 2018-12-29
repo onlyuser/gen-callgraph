@@ -62,6 +62,8 @@ if [ -z "$DEBUG" ]; then
     DEBUG=0
 fi
 
+trap "unset FUNC_PAIR_ARRAY ASM_CMD_HASHMAP UNIQ_FUNC" EXIT
+
 #readelf $EXEC --all
 GEN_SYM_FILE_CMD="readelf $EXEC --headers --symbols"
 
@@ -130,7 +132,6 @@ done <<< "$SYM_FILE_CONTENTS"
 echo -e "\r100%" 1>&2
 if [ "$FOUND_SYMTAB" == 0 ]; then
     echo "Error: Can't find symtab section in \"$EXEC\"."
-    unset FUNC_PAIR_ARRAY
     exit
 fi
 IFS=$'\n'; SORTED_FUNC_PAIR_ARRAY=($(sort <<< "${FUNC_PAIR_ARRAY[*]}")); unset IFS
@@ -182,6 +183,12 @@ for i in `seq 0 $(( $FUNC_COUNT - 1 ))`; do
 
     FUNC_ADDR="`echo \"$FUNC_PAIR\" | cut -d' ' -f1`"
     FUNC_ADDR="`printf \"%x\" 0x$FUNC_ADDR`"
+
+    if [ -n "${UNIQ_FUNC[$FUNC_ADDR]}" ]; then
+        continue
+    fi
+    UNIQ_FUNC[$FUNC_ADDR]="1"
+
     FUNC_NAME="`echo \"$FUNC_PAIR\" | cut -d' ' -f2`"
     FUNC_NAME_DEMANGLED="`echo $FUNC_NAME | c++filt`"
     if [ "$FUNC_ADDR" == "$ENTRY_POINT_ADDR" ]; then
@@ -189,11 +196,6 @@ for i in `seq 0 $(( $FUNC_COUNT - 1 ))`; do
     else
         SHAPE_SPEC_STR=""
     fi
-
-    if [ -n "${UNIQ_FUNC[$FUNC_ADDR]}" ]; then
-        continue
-    fi
-    UNIQ_FUNC[$FUNC_ADDR]="1"
 
     echo "$FUNC_NAME [label=\"0x$FUNC_ADDR: $FUNC_NAME_DEMANGLED\"$SHAPE_SPEC_STR];"
 done
@@ -256,6 +258,3 @@ echo -e "\r100%" 1>&2
 echo "}"
 
 echo "Done!" 1>&2
-
-unset FUNC_PAIR_ARRAY
-unset ASM_CMD_HASHMAP

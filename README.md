@@ -13,9 +13,17 @@ A Motivating Example
 
 input: elf binary from below source:
 <pre>
+class QWE
+{
+public:
+    QWE() {}
+    ~QWE() {}
+    void f() {}
+};
+
 void A();
 void C() {A();}
-void B() {C();}
+void B() {C(); QWE qwe; qwe.f();}
 void A() {B(); C();}
 
 int main(int argc, char** argv)
