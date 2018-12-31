@@ -8,6 +8,8 @@ About
 
 gen-callgraph is a script to generate call graph from elf binary.
 
+See sister project for generating c-tags from elf binary: [gen-ctags](https://github.com/onlyuser/gen-ctags)
+
 A Motivating Example
 --------------------
 
